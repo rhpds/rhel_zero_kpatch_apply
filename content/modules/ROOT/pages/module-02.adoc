@@ -1,149 +1,59 @@
-= Building an Application with rpms
+== Determine what Kernel Live Patches are available
 
-== Downloading the UBI
+When Kernel Live Patches are applied to the kernel, functions within the
+kernel are re-routed from their initial instructions to instead use the
+functions provided by the kpatch. The following diagram provides a bit
+more detail on how this process operates.
 
-In this lab, you will be installing software into the container 
-image running as an interactive application. To do this you will
-need `yum`, but do not need `systemd` for managing services within the
-container environment.  For that reason, you will be using the *Standard*
-UBI image (as opposed to the Minimal or Multi-service images).
+image:../assets/rhel_kpatch_overview.png[Web Console Login] Image from
+the
+https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/7/html/kernel_administration_guide/applying_patches_with_kernel_live_patching[Red
+Hat Kernel Adminstration Guide]
 
-Using the "buildah from" command will download and meld the container image. This particular image we are using is the Red Hat Universal Base Image or UBI. From the ourput of the command, you will notice that we are pulling down the latest one, which is for RHEL 9. 
+This means that a kpatch is produced and tied to a specific version of
+the kernel. Before you look at available kernel patches, you should
+first know the version of the kernel running on your target system.
 
-. Execute the  download the Standard UBI
-image from Red Hat's registry.
-
-+
-[source,sh,role=execute]
-----
-buildah from registry.access.redhat.com/ubi9/ubi
-----
-
-[#repositories]
-== Installing Repositories
-In this lab, you are going to containerize a software package that is already
-packaged in RPM format and stored in the Extra Packages for Enterprise Linux
-(EPEL) repository.
-
-Software often has requirements for prerequisite software that must be installed
-on the machine for it to work properly.  `yum` will resolve those
-dependencies for you, as long as it can locate the required packages in
-repositories defined on the machine.  The Red Hat Universal Base Image (UBI)
-downloaded in the previous step has access to some Red Hat Enterprise Linux
-repositories.  However, the target package for the lab is from EPEL.  
-
-. In the command below, `buildah` is going to run a command on the
-`ubi-working-container` image.  The `--` indicates that the command should be
-executed from within the container, which means the results will be applied into
-the container image.  Lastly, you are providing the `yum` command to install a
-package that defines all of the repositories from EPEL, `epel-release-latest-9`.
-
-+
 [source,bash]
 ----
-buildah run ubi-working-container -- yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+uname -r
 ----
 
-
-. You can verify that the above command did not install the RPM on the host system.
-
-+
 [source,bash]
 ----
-rpm -q epel-release
+5.14.0-284.11.1.el9_2.x86_64
 ----
 
-NOTE: If your repository configurations are not distributed as an RPM, but instead as
-individual `.repo` files, you could use the `buildah copy` command to copy
-files from the host operating system into the container image.  You will see
-an example of using `buildah copy` later in this lab.
+Our lab system is running kernel version (also known as release, hence
+the -r option used by uname) 5.14.0-284.11.1.el9_2.x86_64.
 
-[#software]
-== Installing Software
+Now that you know the version of the kernel running on the lab machine,
+look at all of the aviailable kpatch packages avaiable from the Red Hat
+Enterprise Linux repos.
 
-
-. Now that the yum repositories are defined within the container, execute 
-another `yum install`, within the container, to install the target
-software: `moon-buggy`.
-
-+
 [source,bash]
 ----
-buildah run ubi-working-container -- yum -y install moon-buggy
+dnf list available kpatch-patch*284*
 ----
 
+<< OUTPUT ABRIDGED >>
 
-== Committing the Container Image
+Available Packages kpatch-patch-5_14_0-284_11_1.x86_64 1-1.el9_2
+rhel-9-for-x86_64-baseos-rpms kpatch-patch-5_14_0-284_18_1.x86_64
+0-0.el9_2 rhel-9-for-x86_64-baseos-rpms ```
 
-. At this point, the container is configured.  It is time to transition from a
-working container into a committed image.  In the command below, you will use
-the `buildah` command to commit the working container to an image called:
-`moon-buggy`.
+From the above output, there are several different kpatch-patch patches
+available, but only one of them is the one intended for the kernel
+running on your system. The one needed for your system is
+`+kpatch-patch-5_14_0-284_11_1.x86_64+` because it is the latest
+available for the version of your kernel reported by `+uname -r+`,
+specifically, 5.14.0-284.el9_2.
 
-+
-[source,bash]
-----
-buildah commit ubi-working-container moon-buggy
-----
+If you looked at all available `+kpatch-patch+` packages, you would see
+others listed, like `+kpatch-patch-5_14_0-162_18_1.x86_64+`. These
+kpatches are for another kernel, specifically, version 5.14.0-162. You
+can see that the additional listings are also for addtional kernel
+releases, *not* the one running on your system.
 
-+
-. The output of `podman image list` should confirm the image was created.
-
-+
-[source,bash]
-----
-podman image list
-----
-
-
-== Deploy the Container
-
-Now the software has been installed and a new container image created.  It is
-time to spawn a runtime of the container image and validate the software.  The
-software we are using is a command line command.  
-
-. When you `run` the container,
-it will be in interactive (`-it`) mode, based on the `moon-buggy` container
-image and the command run interactively will be `/usr/bin/moon-buggy`.
-
-+
-[source,bash]
-----
-podman run -it moon-buggy /usr/bin/moon-buggy
-----
-
-+
-[source,textinfo]
-----
-
-<<< OUTPUT ABRIDGED >>>
-               MM     MM   OOOOO    OOOOO   NN     N
-               M M   M M  O     O  O     O  N N    N
-               M  M M  M  O     O  O     O  N  N   N
-               M   M   M  O     O  O     O  N   N  N
-               M       M  O     O  O     O  N    N N
-               M       M   OOOOO    OOOOO   N     NN
-
-                     BBBBBB   U     U   GGGGG    GGGGG   Y     Y
-                     B     B  U     U  G     G  G     G   Y   Y
-                     BBBBBB   U     U  G        G          Y Y
-                     B     B  U     U  G   GGG  G   GGG     Y
-                     B     B  U     U  G     G  G     G    Y
-                     BBBBBB    UUUUU    GGGGG    GGGGG   YY
-
-<<< OUTPUT ABRIDGED >>>
-----
-
-. You can now play the Moon Buggy game, which is a text-based version of the
-popular Moon Patrol.  When you are finished, use the `q` command to quit the
-game, which will terminate the container.
-
-+
-Alternatively, you can use `podman` to kill the running container from
-*Terminal 2*.
-
-+
-[source,bash]
-----
-podman kill $(podman ps | grep -v CONTAINER | cut -f1 -d" " )
-----
+In the next step, you will be applying the kpatch available for your
+system to the kernel.
