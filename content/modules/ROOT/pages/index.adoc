@@ -13,26 +13,19 @@ organizations can apply to their running Red Hat Enterprise Linux
 systems to update the system without scheduling a system downtime to
 apply a kernel update to address the CVE.
 
-To get started, install the `+kpatch+` package:
+To get started, install the `kpatch` package:
 
 [source,bash]
 ----
 dnf -y install kpatch
 ----
 
-Now that the `+kpatch+` application is installed, you can verify that
-the system does not currently have any kpatches loaded into the kernel.
+Now that the `kpatch` application is installed, you can verify that the
+system does not currently have any kpatches loaded into the kernel.
 
 [source,bash]
 ----
 kpatch list
-----
-
-[source,bash]
-----
-Loaded patch modules:
-
-Installed patch modules:
 ----
 
 As expected, no patch modules are loaded or installed on the machine …
