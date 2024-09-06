@@ -2,8 +2,8 @@
 
 In each kpatch-patch package there is a changelog of what was added to
 the patchset and which CVE it applies. You can view the changelog by
-using the `+rpm+` command on the kpatch-patch package. Below, we use a
-bit of embedded command-line scripting to make sure that the package
+using the `rpm` command on the kpatch-patch package. Below, we use a bit
+of embedded command-line scripting to make sure that the package
 referenced for the changelog is the one you installed earlier.
 
 [source,bash]
